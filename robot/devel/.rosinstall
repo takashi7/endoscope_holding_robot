@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/takashi/test/endoscope_holding_robot/robot/devel/setup.sh

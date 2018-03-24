@@ -1,0 +1,57 @@
+#include <stdio.h>
+#include <unistd.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+typedef struct {
+	int sequence;
+	int w[4];
+}Data;
+
+int count = 0;
+
+int main(int argc, char **argv)
+{
+	int sock;
+	struct sockaddr_in addr;
+
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(35000);
+	addr.sin_addr.s_addr = inet_addr("192.168.10.143"); // ip address
+	 
+	Data buf;
+	 
+	while(1){
+	//---------------------------------------------------------------------------------------
+	// loop
+	buf.sequence = count;
+
+	buf.w[0] = (int)(1000* 0 );
+	buf.w[1] = (int)(1000* 0 );
+	buf.w[2] = (int)(1000* 0 );
+	buf.w[3] = (int)(1000* 0 ) ;
+	 
+	printf("%6d, [%d, %d, %d, %d]\n", 
+		buf.sequence,
+		buf.w[0], buf.w[1], buf.w[2], buf.w[3]
+	);
+	++count;
+	//printf("count: %d\n", count);
+		
+	//printf("ok\n");
+	sendto(sock, (const char*)&buf, sizeof(buf), 0, (struct sockaddr *)&addr, sizeof(addr));
+	printf("ok\n");
+	// /loop
+	//---------------------------------------------------------------------------------------
+	sleep(1);
+	}
+	 
+	close(sock);
+
+	return 0;
+}

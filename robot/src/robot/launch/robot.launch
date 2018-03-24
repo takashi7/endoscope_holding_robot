@@ -1,0 +1,4 @@
+ <launch> 
+  <node pkg="robot" type="robot_twist" name="robot_twist" />
+  <node pkg="robot" type="real_client" name="real_client" />
+</launch>
