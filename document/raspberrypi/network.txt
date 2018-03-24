@@ -18,12 +18,12 @@
  	# ad-hoc
 	auto wlan0
 	iface wlan0 inet static
-	address 192.168.5.1		// 好きなアドレス
+	address 192.xxx.x.x		// 好きなアドレス
 	netmask 255.255.255.0		
 	wireless-channel 11		// つながらなかったらいろいろ変える
 	wireless-mode ad-hoc
 	wireless-essid pi		// 好きな名前
-	wireless-key 012345678912345	// 好きなkey
+	wireless-key {$key}	// 好きなkey
 　1-3. 再起動
 	$ sudo reboot
 	
@@ -42,7 +42,7 @@
  		IPv4設定
  			方式：　手動 			
  			アドレス > 追加
- 				アドレス：     192.168.5.2	// piのLAN内の好きなアドレス
+ 				アドレス：     192.xxx.x.x	// piのLAN内の好きなアドレス
  				ネットマスク：　255.255.255.0
  				ゲートウェイ：　無記入
  			保存
@@ -95,12 +95,12 @@
  	# ad-hoc
 	auto wlan0
 	iface wlan0 inet static
-	address 192.168.5.1		// 好きなアドレス
+	address 192.xxx.x.x		// 好きなアドレス
 	netmask 255.255.255.0		
 	wireless-channel 11		// つながらなかったらいろいろ変える
 	wireless-mode ad-hoc
 	wireless-essid pi		// 好きな名前
-	wireless-key 012345678912345	// 好きなkey
+	wireless-key {$key}	// 好きなkey
 　　3-2-3. 再起動
 	$ sudo reboot
   3-2-4. PCに接続
