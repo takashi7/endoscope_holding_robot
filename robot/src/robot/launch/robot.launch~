@@ -1,0 +1,16 @@
+ <launch>
+   <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <param name="video_device" value="/dev/video0" />
+    <param name="image_width" value="640" />
+    <param name="image_height" value="480" />
+    <param name="framerate" value="60" />
+    <param name="pixel_format" value="yuyv" />
+    <param name="camera_frame_id" value="usb_cam" />
+    <param name="io_method" value="mmap"/>
+    <param name="camera_info_url" value="file:///home/takashi/.ros/camera_info/head_camera.yaml" />
+     <remap from="/usb_cam/image_raw" to="/camera/image_raw" />
+  </node>   
+ 
+  <node pkg="robot" type="robot_twist" name="robot_twist" />
+  <node pkg="robot" type="real_client" name="real_client" />
+</launch>

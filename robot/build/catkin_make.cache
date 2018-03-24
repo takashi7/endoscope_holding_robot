@@ -1,0 +1,2 @@
+asparagus:robot
+-DCATKIN_DEVEL_PREFIX=/home/takashi/test/endoscope_holding_robot/robot/devel -DCMAKE_INSTALL_PREFIX=/home/takashi/test/endoscope_holding_robot/robot/install -G Unix Makefiles

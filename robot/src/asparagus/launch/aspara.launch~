@@ -1,0 +1,4 @@
+ <launch>
+  <node pkg="asparagus" type="asparagus_twist" name="asparagus_twist" />
+  <node pkg="asparagus" type="asparagus_master" name="asparagus_master" output="screen" />
+</launch>
