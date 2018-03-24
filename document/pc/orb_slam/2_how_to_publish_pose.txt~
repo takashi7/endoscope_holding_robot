@@ -1,0 +1,127 @@
+2017/10/24
+
+0. 注意
+　単眼カメラに対する方法である
+
+1. ros_mono.cc　のバックアップを取る
+　$ cd ~/SLAM/ORB_SLAM2/Examples/ROS/ORB_SLAM2/src
+　$ cp ros_mono.cc ros_mono_original.cc
+
+2. ros_mono.cc の変更
+ $ cd ~/SLAM/ORB_SLAM2/Examples/ROS/ORB_SLAM2/src
+ $ gedit ros_mono.cc
+ 
+ 
+3. ros_mono.cc の変更内容
+　3-0. コードのコピペでよいが、変更内容を以下に載せる
+　
+　3-1. ヘッダーに以下を追加
+　　  #include "geometry_msgs/TransformStamped.h"
+    #include "tf/transform_datatypes.h"
+    #include <tf/transform_broadcaster.h>
+	
+ 3-2. 配信者ノードの宣言を以下のように追加
+    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+    // 以下の1行を追加
+    ros::Publisher pub_vision = nodeHandler.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose",100);
+    ros::spin();
+ 
+ 3-3. mpSLAMを変数に入れる（一番最後の行）
+ 	cv::Mat pose = mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
+ 	
+ 3-4. 以下を3-3の下から最後の'}'の間に入れる
+ 　if (pose.empty())
+         return;
+    
+    /* global left handed coordinate system */
+	static cv::Mat pose_prev = cv::Mat::eye(4,4, CV_32F);
+	static cv::Mat world_lh = cv::Mat::eye(4,4, CV_32F);
+	// matrix to flip signs of sinus in rotation matrix, not sure why we need to do that
+	static const cv::Mat flipSign = (cv::Mat_<float>(4,4) <<   1,-1,-1, 1,
+			-1, 1,-1, 1,
+			-1,-1, 1, 1,
+			1, 1, 1, 1);
+
+	//prev_pose * T = pose
+	cv::Mat translation =  (pose * pose_prev.inv()).mul(flipSign);
+	world_lh = world_lh * translation;
+	pose_prev = pose.clone();
+
+	tf::Matrix3x3 tf3d;
+	tf3d.setValue(pose.at<float>(0,0), pose.at<float>(0,1), pose.at<float>(0,2),
+			pose.at<float>(1,0), pose.at<float>(1,1), pose.at<float>(1,2),
+			pose.at<float>(2,0), pose.at<float>(2,1), pose.at<float>(2,2));
+
+	tf::Vector3 cameraTranslation_rh( world_lh.at<float>(0,3),world_lh.at<float>(1,3), - world_lh.at<float>(2,3) );
+
+	//rotate 270deg about x and 270deg about x to get ENU: x forward, y left, z up
+	const tf::Matrix3x3 rotation270degXZ(   0, 1, 0,
+			0, 0, 1,
+			1, 0, 0);
+
+	static tf::TransformBroadcaster br;
+
+	tf::Matrix3x3 globalRotation_rh = tf3d;
+	tf::Vector3 globalTranslation_rh = cameraTranslation_rh * rotation270degXZ;
+
+	tf::Quaternion tfqt;
+	globalRotation_rh.getRotation(tfqt);
+
+	double aux = tfqt[0];
+	tfqt[0]=-tfqt[2];
+	tfqt[2]=tfqt[1];
+	tfqt[1]=aux;
+
+	tf::Transform transform;
+	transform.setOrigin(globalTranslation_rh);
+	transform.setRotation(tfqt);
+
+	br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "camera_pose"));
+	
+4. 姿勢が配信されているか確認
+　　Terminal1
+　　 $ roscore
+　 
+　　Terminal2
+　　 $ cd ~/SLAM/ORB_SLAM2
+　　 $ rosrun ORB_SLAM2 Mono Vocabulary/ORBvoc.txt Examples/Monocular/ELP1080p.yaml 
+　
+　　Terminal3
+　　 $ roslaunch ~/SLAM/ORB_SLAM2/launch/camera.launch
+
+　4-1. echoで確認
+　　Terminal4
+　　 $ rostopic list
+　　 $ rostopic echo /tf
+　
+　4-2. rvizで確認
+　　Terminal4
+　　 $ rosrun rviz rviz
+
+ 　4-2-1. rvizの使い方
+ 　　1. Display-Global Options-Fixed Frameをmapからworldに変更
+ 　 2. AddでTFを追加
+ 　 3. 固定されたworld座標と動くcamera_pose座標が出てきて、動きが現実と合ってたら成功
+ 　 4. Views-current View-target Frameをcamra_poseにすると画面がcamera_pose座標といっしょに動く
+
+
+参考 （主に1を参照）
+ 内容
+　　1. Publish camera pose as tf ros message #102
+　 2. #102 commit
+　 3. 4x4 Transformation Matrix to tf Transform
+　 4. how can i publish the camera pose into ros topic? #131
+　 5. How can I publish Camera Poses (3D Position+3D Orientation) in real-time for ORB_SLAM2 ? #146
+　 6. ardrone_testbed
+　 7. EnsekiTT/ORB_SLAM2
+　 
+　URL
+　 1. https://github.com/raulmur/ORB_SLAM2/pull/102
+　 2. https://github.com/raulmur/ORB_SLAM2/pull/102/commits/f63ac0eeb6f5fd80bbc66e969385c2c870a884c7
+　 3. https://answers.ros.org/question/103411/4x4-transformation-matrix-to-tf-transform/
+　 4. https://github.com/raulmur/ORB_SLAM2/issues/131
+　 5. https://github.com/raulmur/ORB_SLAM2/issues/146
+　 6. https://github.com/idsc-frazzoli/ardrone_testbed/blob/master/ORB_SLAM2/Examples/ROS/ORB_SLAM2/src/ros_mono.cc
+  7. https://github.com/EnsekiTT/ORB_SLAM2/tree/master/Examples/ROS/src/orb_slam2/src
+ 	
+ 	

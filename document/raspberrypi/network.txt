@@ -1,0 +1,127 @@
+2017/12/15
+紺野隆志
+
+0. やること
+ 1. PCとラズパイとの通信は、アクセスポイントを介するインフラストラクチャーモードだった
+ 　　 そのため、通信の遅れがあったのではと考え、直接通信するアドホックモードに変更する
+ 2. 環境
+	ラズパイ: strech
+	PC:	 ubuntu14.4
+ 3. 1~2を変える
+ 	アドホック通信だとロボットとの通信ができないため
+ 	PCをアクセスポイントにする
+
+1. ラズパイ側の設定
+ 1-1. コマンド
+	$ sudo nano /etc/network/interfaces
+ 1-2. 以下を末尾に追加
+ 	# ad-hoc
+	auto wlan0
+	iface wlan0 inet static
+	address 192.168.5.1		// 好きなアドレス
+	netmask 255.255.255.0		
+	wireless-channel 11		// つながらなかったらいろいろ変える
+	wireless-mode ad-hoc
+	wireless-essid pi		// 好きな名前
+	wireless-key 012345678912345	// 好きなkey
+　1-3. 再起動
+	$ sudo reboot
+	
+2. PC側の設定
+ 2-1. 手順
+ 	画面右上のネットワークボタン
+ 	非表示wifiネットワークに接続
+ 		接続：　新規
+ 		ネットワーク名：　pi
+ 		wifiセキュリティ：　なし
+ 		接続
+ 	設定 > ネットワーク > 無線　のGUIが自動で出てくるはず(出てこなかったら手動でいく)
+ 	設定ボタン
+ 		wifi
+ 			モード：　アドホック
+ 		IPv4設定
+ 			方式：　手動 			
+ 			アドレス > 追加
+ 				アドレス：     192.168.5.2	// piのLAN内の好きなアドレス
+ 				ネットマスク：　255.255.255.0
+ 				ゲートウェイ：　無記入
+ 			保存
+ 2-2. 上記手順でつながらない場合
+	1. piに接続中ハードウェアアドレスが出てこない
+		ラズパイ側の設定が間違ってる
+		設定は保存したか
+		再起動したか
+		アドレスが誰も使ってないか
+		チャンネルを変える
+	2. ハードウェアアドレスは出てくるが、つながらない
+		設定がどこか間違ってる
+		アドレスの再確認
+		
+3. PCのアクセスポイント化
+ 3-1. PCの設定 (参考4)
+  3-1-0. 参考4には図も載ってるので、それ見ながらやるとよい
+ 　3-1-1. wifiの接続を切る
+ 　3-1-2. 右上のネットワークアイコン押す > 接続を編集する > 追加
+ 　3-1-3. ドロップダウンからwifiを選択
+ 　3-1-4. wifiタブを選ぶ
+ 　		適当な接続名をつける
+ 　		SSIDを入れる
+ 　		モードはインフラストラクチャを選ぶ
+ 　		デバイスのMACアドレスにwifiのMACアドレスを入れる
+ 　			MACアドレスはifconfigで確認できる
+ 　				wlan0のハードウェアアドレス
+ 　3-1-5. wifiセキュリティタブを選ぶ
+ 　		 WPA & WPA2 Personalを選択
+ 　		 適当なパスワードを入力
+ 　		 	適当なパスワードでないと保存できない 　		
+ 　3-1-6. IPv4タブを選ぶ
+ 　		方式は他のコンピューターへ共有を選ぶ
+ 　3-1-7. 終わったら保存を選び終了
+ 　3-1-8. system-connectionsの設定
+ 　　3-1-8-1. 
+ 　	$ cd /etc/NetworkManager/system-connections
+ 　 3-1-8-2. 接続名がwifi-hotspotならwifi-hotspotというファイルがあるので開く
+ 　 	$ gedit wifi-hotspot
+ 　 3-1-8-3. 編集
+ 　 	mode=infrastructure をコメントアウトして
+ 　 	mode=ap　を追加
+ 　 3-1-8-4. 保存して閉じる
+ 　3-1-9. 右上のネットワークアイコン押す 
+ 　　	　　> 接続名がwifi-hotspotならwifi-hotspotがあるので接続
+ 3-2. ラズパイの設定
+ 　3-2-1. コマンド
+	$ sudo nano /etc/network/interfaces
+ 　3-2-2. 1で追加した以下をコメントアウトする
+ 	# ad-hoc
+	auto wlan0
+	iface wlan0 inet static
+	address 192.168.5.1		// 好きなアドレス
+	netmask 255.255.255.0		
+	wireless-channel 11		// つながらなかったらいろいろ変える
+	wireless-mode ad-hoc
+	wireless-essid pi		// 好きな名前
+	wireless-key 012345678912345	// 好きなkey
+　　3-2-3. 再起動
+	$ sudo reboot
+  3-2-4. PCに接続
+  	自分の設定したwifiにつなぐ
+  	IPアドレスを確認する
+
+参考
+1. Raspberry Pi 2とMacをad-hocで接続する
+2. UbuntuのNetwork Managerで無線LAN固定IPアドレスの設定
+3. Raspberry Pi を BUFFALO の USB wifi で ad-hoc 通信する設定
+4. 3 Ways to Create Wifi Hotspot in Ubuntu 14.04 (Android Support)
+5. UbuntuのWi-Fiアクセスポイント化
+6. Ubuntu 16.04でWi-Fiアクセスポイント（ルータ）化＋はまった点メモ
+
+1. https://qiita.com/mjhd-devlion/items/f9de904a53d7824a26bd
+2. https://tomosoft.jp/design/?p=4974
+3. https://qiita.com/UedaTakeyuki/items/851fc8c19f36b96a0ae6 				
+4. http://ubuntuhandbook.org/index.php/2014/09/3-ways-create-wifi-hotspot-ubuntu/
+5. https://kokawa2003.blogspot.jp/2016/03/ubuntuwi-fi.html
+6. https://qiita.com/ishihatta/items/c95308265af0c2ddfea1
+ 
+
+
+

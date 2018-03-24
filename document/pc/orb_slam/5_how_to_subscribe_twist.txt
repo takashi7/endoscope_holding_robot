@@ -1,0 +1,148 @@
+2017/10/26
+紺野隆志
+
+0. 注意
+　1. ほとんど '3_how_to_subscribe_rpy.txt'　と同じ
+ 2. カメラの速度と角速度を計算して配信する
+ 3. Twisのデータ構造
+ 　　　　　Raw Message Definition
+ 	# This expresses velocity in free space broken into its linear and angular parts.
+	Vector3  linear
+	Vector3  angular
+　　　　　　Compact Message Definition
+	geometry_msgs/Vector3 linear
+	geometry_msgs/Vector3 angular
+ 
+4. sub_twist.cpp の編集
+ 4-1.  
+　　$ roscd orbslam_tf
+　　$ mkdir src
+　　$ cd src
+　　$ gedit sub_twist.cpp
+　
+　4-2. sub_twist.cpp　の編集
+  以下をコピペ　
+  適宜修正する 
+	#include <ros/ros.h>
+	#include "geometry_msgs/TransformStamped.h"
+	#include "tf/transform_datatypes.h"
+	#include "geometry_msgs/Twist.h"
+	#include "geometry_msgs/Quaternion.h"
+	#include <tf/transform_listener.h>
+
+
+	int main(int argc, char** argv){
+	  ros::init(argc, argv, "Mono_twist");
+	  ros::NodeHandle node;
+	  tf::TransformListener listener;  
+	  ros::Publisher caemera_pose = node.advertise<geometry_msgs::Twist>("camera/twist", 10);    
+	  
+	  ros::Rate rate(10.0);
+	  while (node.ok()){
+	    geometry_msgs::Twist objectTwist;
+	    try{
+	      listener.lookupTwist("/camera_pose", "/world", ros::Time(0), ros::Duration(0.1), objectTwist);
+	    }
+	    catch (tf::TransformException &ex) {
+	      ROS_ERROR("%s",ex.what());
+	      ros::Duration(1.0).sleep();
+	      continue;
+	    }
+	    
+	    caemera_pose.publish(objectTwist);
+
+	    rate.sleep();
+	  }
+	  return 0;
+	};
+	
+　4-3. プログラムの補足
+　 4-3-1. カメラの速度と角速度を計算するのに以下の関数を使った	
+	
+	void Transformer::lookupTwist(const std::string & 	tracking_frame,
+				      const std::string & 	observation_frame,
+				      const ros::Time & 	time,
+				      const ros::Duration & 	averaging_interval,
+				      geometry_msgs::Twist & 	twist	 
+				     )			const
+
+　 4-3-2. 関数のパラメータについて	
+　	Parameters:
+		tracking_frame 		The frame to track
+		observation_frame 	The frame from which to measure the twist
+		time 			The time at which to get the velocity
+		duration 		The period over which to average
+		twist 			The twist output
+　　4-3-3. 関数から得られた 'twist' をそのまま配信している
+　	
+　	
+5. CMakeLists.txtの編集
+　5-1. 
+　 $ roscd orbslam_tf
+　 $ gedit CMakeLists.txt
+　
+　5-2. include_directories()の下に以下を挿入
+　 　実行名は適宜変えてよい
+	add_executable(sub_twist src/sub_twist.cpp)
+	target_link_libraries(sub_twist ${catkin_LIBRARIES})
+
+6. パッケージのビルド
+ 6-1. 
+　 $ cd ~/catkin_ws
+　 $ catkin_make
+ 
+ 6-2. 
+  成功すると '~/catkin_ws/devel/lib/orbslam_tf' に 'sub_twist' という実行ファイルができる 
+
+7. '/camera/twist'　の確認 
+　　Terminal1
+　　 $ roscore
+　 
+　　Terminal2
+　　 $ cd ~/SLAM/ORB_SLAM2
+　　 $ rosrun ORB_SLAM2 Mono Vocabulary/ORBvoc.txt Examples/Monocular/ELP1080p.yaml 
+　
+　　Terminal3
+　　 $ roslaunch ~/SLAM/ORB_SLAM2/launch/camera.launch
+　　 
+　　Terminal4
+　　 $ rosrun orbslam_tf sub_twist
+
+　7-1. echoで確認
+　　Terminal5
+　　 $ rostopic list
+　　 $ rostopic echo /camera/twist　
+　　 
+　7-2. rqt_plotで確認
+　　Terminal6
+　　 $ rqt_graph
+　　
+　　7-2-1. 以下のトピックを追加
+　　 /camera/twist/linear
+　　 /camera/twist/angular
+　　
+　　7-2-2. 軸のレンジを適宜ズームしたりして変える
+
+
+参考
+ 内容
+　　1. Calculating velocity from tf
+　　2. tf::Transformer Class Reference
+　　3. tf.cpp(260 - 346)
+　　4. tf package: Transformer::lookupTwist(...) results seem to be wrong #43
+　　5. tutorial on lookupTwist function #89
+　　6. listener lookupTwist producting wrong velocity for turns.
+　　7. geometry_msgs/Twist Message
+　　8. ros::Duration Class Reference
+　
+　URL
+　 1. https://answers.ros.org/question/12894/calculating-velocity-from-tf/
+　 2. http://docs.ros.org/jade/api/tf/html/c++/classtf_1_1Transformer.html#a150d91fc9f25e0a5fcb8ef5aea3ec645
+　 3. http://docs.ros.org/jade/api/tf/html/c++/tf_8cpp_source.html#l00238
+　 4. https://github.com/ros/geometry/issues/43
+　 5. https://github.com/ros/geometry/pull/89
+　 6. https://answers.ros.org/question/238471/listener-lookuptwist-producting-wrong-velocity-for-turns/
+　 7. http://docs.ros.org/api/geometry_msgs/html/msg/Twist.html
+　 8. http://docs.ros.org/diamondback/api/rostime/html/classros_1_1Duration.html#_details
+
+　

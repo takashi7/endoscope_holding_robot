@@ -1,0 +1,85 @@
+2017/12/9
+紺野隆志
+
+0. 注意
+ 0-1. 
+　 1. バックアップとるSDカードはbootとOSの2つのパーテーションがあった。
+　 2. 容量はそれぞれ42Mと7.3G
+　 3. バックアップ用のSDカードは8Gでパーテーションは1つだけ
+　0-2. 手順
+　　1. バックアップとるSDカードからbootとOSの2つのimgファイルを作る
+　　2. バックアップ用のSDカードに2つのパーティションを作る
+　　3. それぞれのパーティションにbootとOSの2つのimgファイルを書き込む
+
+1. イメージ読み出し (参考1-4)
+ 1-1. ディスクのデバイスファイルを確認
+ 	$ df -h
+ 	/dev/sdb1 (boot) と　/dev/sdb2 (OS)　だった
+ 1-2. イメージ読み出し
+	$ cd
+	$ mkdir backup
+	$ sudo dd if=/dev/sdb1 of=./boot.img
+	$ sudo dd if=/dev/sdb2 of=./RPi.img
+ 1-3. SDカードの取り出し
+ 
+2. パーティションの作成 (参考5-8)
+　2-0. 書き込むようのSDカードを入れる
+　2-1. GPartedの起動
+	$ sudo gparted
+　2-2. 操作
+	1. ドライブを/dev/sdbに変える
+	2. /dev/sdb1　を右クリック
+	3. アンマウント
+	4. /dev/sdb1　を右クリック
+	5. リサイズ
+	6. フォーマットをfat32にしてサイズを33Mib(最小)に設定
+	7. 未割り当てを右クリック
+	8. リサイズ
+	9. フォーマットをext4にしてサイズを最大に設定
+	10. 適用
+ 2-3. SDカードの取り出し
+
+3. イメージ書き込み
+　3-0. 書き込むようのSDカードを入れる
+　3-1. アンマウント
+	$ df- h
+	$ umount /dev/sdb1
+	$ umount /dev/sdb2
+　3-2. 書き込み
+　	$ cd ~/backup
+　	$ sudo dd bs=1MB if=./boot.img of=/dev/sdb1
+　	$ sudo dd bs=1MB if=./RPi.img of=/dev/sdb2
+
+
+参考
+1. MacでRaspberry PiのSDカードをハードコピー（バックアップ）
+2. 【 dd 】 ファイルの変換とコピーを行う
+3. ddコマンドを使って、SDカードをイメージにする
+4. Linux(Ubuntu)で、RaspberryPiのSDカードをインストールする方法
+5. Ubuntu GParted その8 - パーティションを作成する
+6. 【ゼロから解説】Linuxのフォーマットの方法
+7.　MB（単位）とは？MiBとは？
+8. SDカードのフォーマット手順（gparted） - UbuntuAdd Star
+9. 
+10. 
+
+1. http://karaage.hatenadiary.jp/entry/2015/06/09/080000
+2. http://itpro.nikkeibp.co.jp/article/COLUMN/20060227/230741/?rt=nocnt
+3. http://kamuycikap.hatenablog.com/entry/2015/02/21/224451
+4. https://qiita.com/takanemu/items/8fa157688efe0d4b01a6
+5. https://kledgeb.blogspot.jp/2012/10/ubuntu-gparted-8.html
+6. https://eng-entrance.com/linux-format
+7. https://academy.gmocloud.com/keywords/20170510/4314
+8. http://d.hatena.ne.jp/yuchansl/20131126/1385484339
+9. 
+10. 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 

@@ -1,0 +1,153 @@
+1. 環境
+　Ubuntu14.04(x64)
+　ROS Indigo
+
+2. 作業フォルダの作成
+　$ mkdir ~/SLAM
+　$ cd ~/SLAM
+
+3. Pangolinのインストール
+　$ git clone https://github.com/stevenlovegrove/Pangolin.git
+　$ cd Pangolin
+　$ mkdir build
+　$ cd build
+　$ cmake ..
+
+ 　Error
+  　CMake Error at CMakeModules/FindGLEW.cmake:51 (MESSAGE):
+  　Could not find GLEW
+  パッケージのインストール
+  　$ sudo apt-get install libglew-dev
+  必要なパッケージ
+ 　　$ sudo apt-get install python-rosinstall
+ 　　$ sudo apt-get install libglew-dev
+ 　　$ sudo apt-get install cmake
+ 　　$ sudo apt-get install libpython2.7-dev
+ 　　$ sudo apt-get install libjpeg-dev libpng12-dev libtiff5-dev libopenexr-dev
+
+　$ cmake --build .
+　
+　
+4. インストールされてなければインストールするもの
+　OpenCV (Required at leat 2.4.3. Tested with OpenCV 2.4.11 and OpenCV 3.2.)
+　Eigen3 (Required at least 3.1.0.)
+　
+5. ORB-SLAM2のインストール
+　$ git clone https://github.com/raulmur/ORB_SLAM2.git ORB_SLAM2
+　
+6. Thirdparty libraries と ORB-SLAM2のビルド
+　$ cd ORB_SLAM2
+ $ chmod +x build.sh
+ $ ./build.sh
+ 
+7. データセットで動作確認
+　$ mkdir ~/SLAM/dataset
+　$ cd ~/SLAM/dataset
+　$ wget https://vision.in.tum.de/rgbd/dataset/freiburg1/rgbd_dataset_freiburg1_xyz.tgz
+　$ tar -zxf rgbd_dataset_freiburg1_xyz.tgz
+ $ cd ~/SLAM/ORB_SLAM2/
+ $ ./Examples/Monocular/mono_tum Vocabulary/ORBvoc.txt Examples/Monocular/TUM1.yaml ~/SLAM/dataset/rgbd_dataset_freiburg1_xyz 
+　 
+ 
+8. ROSを使用
+ 
+9. ROSへのパスを追加
+　$ gedit ~/.bashrc
+　export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:~/SLAM/ORB_SLAM2/Examples/ROS
+
+10. ROSノードのビルド
+　$chmod +x build_ros.sh
+　$./build_ros.sh
+　
+　Error 
+　 mkdir: ディレクトリ `build' を作成できません: ファイルが存在します
+　 別のターミナルで実行したら、同じエラーが出たが、なぜかうまくいった
+　 
+11. LSD_room.bagをROSで再生
+　$ cd ~/SLAM/dataset
+　$ wget http://vmcremers8.informatik.tu-muenchen.de/lsd/LSD_room.bag.zip
+　$ unzip LSD_room.bag.zip
+　
+　Terminal1
+　 $ roscore
+　 
+　Terminal2
+　 $ cd ~/SLAM/ORB_SLAM2
+　 $ rosrun ORB_SLAM2 Mono Vocabulary/ORBvoc.txt Examples/Monocular/TUM1.yaml 
+　
+　Terminal3
+　 $ cd ~/SLAM/dataset
+　 $ rosbag play LSD_room.bag /image_raw:=/camera/image_raw
+
+
+12. USBカメラ（単眼）で実行
+ 12-1. キャリブレーション
+ 　calibration.txt参照
+ 　
+ 12-2. USBカメラのlaunchファイルを作成
+  $ cd ~/SLAM/ORB_SLAM2
+  $ mkdir launch
+  $ cd launch
+  $ gedit camera.lauch
+  
+  12-2-1. camera.launchの編集
+    
+ 12-3. USBカメラ用の設定ファイルを作成
+ 　$ cd ~/SLAM/ORB_SLAM2/Examples/Monocular
+  $ cp TUM1.yaml ELP1080p.yaml    % ELP1080pはカメラの名前
+  $ gedit ELP1080p.yaml
+  
+  12-3-1. ELP1080p.yamlの編集
+  　 キャリブレーションで得たyamlファイルを参照して、求められているパラメータを編集
+ 　  キャリブレーションで得たyamlファイル
+	  　camera_matrix:
+	   data: [fx, 0, cx, 0, fy, cy, 0, 0, 1]
+	   distortion_coefficients:
+	   data: [k1, k2, p1, p2, (k3)]
+    ELP1080p.yamlファイル(例)
+   	 # Camera calibration and distortion parameters (OpenCV) 
+	　 　Camera.fx: 480.7226829529712
+	　　 Camera.fy: 480.042802203604
+	　　 Camera.cx: 362.3851681657669
+	　　 Camera.cy: 247.9879304986205
+
+ 	　　 Camera.k1: -0.3765731029022878
+	　　 Camera.k2: 0.1100006439318621
+	　　 Camera.p1: -0.00203404030139328
+	　　 Camera.p2: -0.0004612670305239889
+	　　 Camera.k3: 0
+    
+ 12-5. 実行（launchなし）
+　　Terminal1
+　　 $ roscore
+　 
+　　Terminal2
+　　 $ cd ~/SLAM/ORB_SLAM2
+　　 $ rosrun ORB_SLAM2 Mono Vocabulary/ORBvoc.txt Examples/Monocular/ELP1080p.yaml 
+　
+　　Terminal3
+　　 $ rosparam set /usb_cam/pixel_format yuyv
+　　　$ rosrun usb_cam usb_cam_node /usb_cam/image_raw:=/camera/image_raw
+
+　12-5. 実行（launchあり）
+　　Terminal1
+　　 $ roscore
+　 
+　　Terminal2
+　　 $ cd ~/SLAM/ORB_SLAM2
+　　 $ rosrun ORB_SLAM2 Mono Vocabulary/ORBvoc.txt Examples/Monocular/ELP1080p.yaml 
+　
+　　Terminal3
+　　 $ roslaunch ~/SLAM/ORB_SLAM2/launch/camera.launch
+
+
+
+
+参考
+　https://github.com/raulmur/ORB_SLAM2
+　https://vision.in.tum.de/data/datasets/rgbd-dataset/download
+　https://zhuanlan.zhihu.com/p/25077218
+　https://qiita.com/nnn112358/items/1087d5b0e4df5367f48b
+　http://ensekitt.hatenablog.com/entry/visualslam4
+　http://ensekitt.hatenablog.com/entry/visualslam5
+　http://ensekitt.hatenablog.com/entry/visualslam6

@@ -1,0 +1,255 @@
+2017/11/14
+紺野隆志
+
+0. 注意
+　0-1. 2_how_to_publish_pose.txt　と　5_how_to_subscribe_twist.txt　を少し変える
+　
+1. すること
+　1-1. ros_mono.cc　で一つ前のフレームのカメラの位置と姿勢(pre_pose)と、現在のフレームのカメラの位置と姿勢(pose)を配信する
+　1-2. twist.cpp　で pre_pose　と　pose　の座標変換を計算して、それを速度と角速度とする
+
+
+2. ros_mono.cc　の編集
+　2-1. ros_mono.cc　のバックアップを取る
+　 $ cd ~/SLAM/ORB_SLAM2/Examples/ROS/ORB_SLAM2/src
+　 $ cp ros_mono.cc ros_mono_original.cc
+
+ 2-2. ros_mono.cc の変更 
+  $ cd ~/SLAM/ORB_SLAM2/Examples/ROS/ORB_SLAM2/src
+  $ gedit ros_mono.cc
+  
+ 2-3. ros_mono.cc の変更内容
+　 2-3-0. コードのコピペでよいが、変更内容を以下に載せる
+　
+　 2-3-1. ヘッダーに以下を追加
+	#include "geometry_msgs/TransformStamped.h"
+	#include "tf/transform_datatypes.h"
+	#include <tf/transform_broadcaster.h>
+	
+  2-3-2. 配信者ノードの宣言を以下のように追加
+	ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+	// 以下の1行を追加
+	ros::Publisher pub_vision = nodeHandler.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose",100);
+	ros::spin();
+ 
+  2-3-3. mpSLAMを変数に入れる（一番最後の行）
+	cv::Mat pose = mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
+ 	
+  2-3-4. 以下を2-3-3の下から最後の'}'の間に入れる
+	 　ros::Time t = msg->header.stamp;
+	    
+	    if (pose.empty())
+		 return;
+	    
+	    tf::Transform transform = cvMatToTF(pose);
+	    //static tf::Transform pre_transform = pre_transform;
+	    pre_transform = pre_transform;
+	    
+	    br.sendTransform(tf::StampedTransform(pre_transform, t, "world", "pre_camera_pose"));
+	    br.sendTransform(tf::StampedTransform(transform, t, "world", "camera_pose"));    
+	    
+	    pre_transform = transform;
+	}
+
+	tf::Transform ImageGrabber::cvMatToTF ( cv::Mat Tcw )
+	{
+	     tf::Transform cam_to_first_keyframe_transform;
+	     // invert since Tcw (transform from world to camera)
+	     cv::Mat pose = Tcw.inv();
+
+	     //Extract transformation from the raw orb SLAM pose
+	     tf::Vector3 origin;
+	     //tf::Quaternion transform_quat;
+	     tf::Matrix3x3 transform_matrix;
+
+	     origin.setValue ( pose.at<float> ( 0, 3 ), pose.at<float> ( 1, 3 ), pose.at<float> ( 2, 3 ) );
+
+	     transform_matrix.setValue ( pose.at<float> ( 0, 0 ), pose.at<float> ( 0, 1 ), pose.at<float> ( 0, 2 ),
+		                         pose.at<float> ( 1, 0 ), pose.at<float> ( 1, 1 ), pose.at<float> ( 1, 2 ),
+		                         pose.at<float> ( 2, 0 ), pose.at<float> ( 2, 1 ), pose.at<float> ( 2, 2 ) );
+
+	   
+	     //transform_matrix.getRotation(transform_quat);
+	     cam_to_first_keyframe_transform.setOrigin ( origin );
+	     cam_to_first_keyframe_transform.setBasis ( transform_matrix );
+
+	     return cam_to_first_keyframe_transform;
+	}
+		
+ 2-4. 姿勢が配信されているか確認 (適宜いろいろ変える)
+　 　Terminal1
+　　  $ roscore
+　 
+　　 Terminal2
+　　  $ cd ~/SLAM/ORB_SLAM2
+　　  $ rosrun ORB_SLAM2 Mono Vocabulary/ORBvoc.txt Examples/Monocular/ELP1080p.yaml 
+　
+ 　　Terminal3
+ 　　 $ roslaunch ~/SLAM/ORB_SLAM2/launch/camera.launch
+
+　 2-4-1. echoで確認
+　　 Terminal4
+　　  $ rostopic list
+　　  $ rostopic echo /tf
+　
+　 2-4-2. rvizで確認
+　　 Terminal4
+　　  $ rosrun rviz rviz
+
+ 　 2-4-2-1. rvizの使い方
+ 　　 1. Display-Global Options-Fixed Frameをmapからworldに変更
+ 　  2. AddでTFを追加
+ 　  3. 固定されたworld座標と動くcamera_pose座標が出てきて、動きが現実と合ってたら成功
+ 　  4. Views-current View-target Frameをcamra_poseにすると画面がcamera_pose座標といっしょに動く
+
+
+3. twist.cpp の編集　
+　3-1. srcディレクトリを作っていなかったら3行目をする
+ 　$ roscd orbslam_tf
+ 　($ mkdir src)
+ 　$ cd src
+ 　$ gedit twist.cpp
+　
+ 3-2. twist.cpp　の編集
+  以下をコピペ　
+  適宜修正する 
+	#include <ros/ros.h>
+	#include "geometry_msgs/TransformStamped.h"
+	#include "tf/transform_datatypes.h"
+	#include "geometry_msgs/Twist.h"
+	#include <tf/transform_broadcaster.h>
+	#include <tf/transform_listener.h>
+
+
+	int main(int argc, char** argv){
+	  ros::init(argc, argv, "Mono_twist");
+	  ros::NodeHandle node;
+	  tf::TransformBroadcaster br;
+	  tf::TransformListener listener;
+	  ros::Publisher caemera_pose = node.advertise<geometry_msgs::Twist>("camera/twist/twist", 10);    
+	  
+	  ros::Rate rate(10.0);
+	  while (node.ok()){
+	    geometry_msgs::Twist objectTwist;
+	    tf::StampedTransform transform;
+	    tf::Matrix3x3 rotation;
+	    try{
+	      listener.lookupTransform("/pre_camera_pose", "/camera_pose", ros::Time(0), transform);   
+	    }
+	    catch (tf::TransformException &ex) {
+	      ROS_ERROR("%s",ex.what());
+	      ros::Duration(1.0).sleep();
+	      continue;
+	    }	    
+	    rotation = transform.getBasis();    
+	    rotation.getRPY(objectTwist.angular.x, objectTwist.angular.y, objectTwist.angular.z);    	   
+	    objectTwist.linear.x = float(transform.getOrigin().x());
+	    objectTwist.linear.y = float(transform.getOrigin().y());
+	    objectTwist.linear.z = float(transform.getOrigin().z());
+	    caemera_pose.publish(objectTwist);
+
+	    rate.sleep();
+	  }
+	  return 0;
+	};
+	
+　3-3. プログラムの補足
+　 3-3-1. pre_poseとposeの座標変換（これを速度と角速度としている）を計算するのに以下の関数を使った		
+	void Transformer::lookupTransform(const std::string & 	target_frame,
+					  const std::string & 	source_frame,
+					  const ros::Time & 	time,
+					  StampedTransform & 	transform 
+					 )		const
+					 
+　3-3-2. 関数のパラメータについて	
+	Parameters:
+		target_frame	The frame to which data should be transformed
+		source_frame	The frame where the data originated
+		time	The time at which the value of the transform is desired. (0 will get the latest)
+		transform	The transform reference to fill.
+		
+　3-3-3. transform　を以下で速度と角速度に変換している
+	rotation = transform.getBasis();    	
+	rotation.getRPY(objectTwist.angular.x, objectTwist.angular.y, objectTwist.angular.z); 
+	objectTwist.linear.x = float(transform.getOrigin().x());
+	objectTwist.linear.y = float(transform.getOrigin().y());
+	objectTwist.linear.z = float(transform.getOrigin().z());   	    
+	caemera_pose.publish(objectTwist);
+　	
+　3-4. CMakeLists.txtの編集
+　 3-4-1. 
+　  $ roscd orbslam_tf
+　  $ gedit CMakeLists.txt
+　
+　 3-4-2. include_directories()の下に以下を挿入
+　  実行名は適宜変えてよい
+	add_executable(twist src/twist.cpp)
+	target_link_libraries(twist ${catkin_LIBRARIES})
+
+ 3-5. パッケージのビルド
+  3-5-1. 
+　  $ cd ~/catkin_ws
+　  $ catkin_make
+ 
+  3-5-2. 
+   成功すると '~/catkin_ws/devel/lib/orbslam_tf' に 'twist' という実行ファイルができる 
+
+ 3-6. '/camera/twist/twist'　の確認 
+　  Terminal1
+　   $ roscore
+　 
+　　 Terminal2
+　   $ cd ~/SLAM/ORB_SLAM2
+　   $ rosrun ORB_SLAM2 Mono Vocabulary/ORBvoc.txt Examples/Monocular/ELP1080p.yaml 
+　
+　  Terminal3
+　   $ roslaunch ~/SLAM/ORB_SLAM2/launch/camera.launch
+　　   
+　  Terminal4
+　   $ rosrun orbslam_tf twist
+
+　 3-6-1. echoで確認
+　  Terminal5
+　   $ rostopic list
+　   $ rostopic echo /camera/twist/twist　
+　　 
+　 3-6-2. rqt_plotで確認
+　  Terminal5
+　   $ rqt_plot
+　　
+　  3-6-2-1. 以下のトピックを追加
+　   /camera//twist/twist/linear
+　   /camera/twist/twist/angular
+　　
+　  3-6-2-2. 軸のレンジを適宜ズームしたりして変える
+
+
+参考
+ 内容
+　　1. Publish camera pose as tf ros message #102
+　 2. #102 commit
+　 3. 4x4 Transformation Matrix to tf Transform
+　 4. how can i publish the camera pose into ros topic? #131
+　 5. How can I publish Camera Poses (3D Position+3D Orientation) in real-time for ORB_SLAM2 ? #146
+　 6. ardrone_testbed
+　 7. tf::Transformer Class Reference
+　 8. tf2::Matrix3x3 Class Reference
+　 9. How to transform a pose
+　 10. tf.cpp
+　 11. tf::Transform Class Reference
+　 12. 世界で一番簡単なtfの使い方
+　 
+　URL
+　 1. https://github.com/raulmur/ORB_SLAM2/pull/102
+　 2. https://github.com/raulmur/ORB_SLAM2/pull/102/commits/f63ac0eeb6f5fd80bbc66e969385c2c870a884c7
+　 3. https://answers.ros.org/question/103411/4x4-transformation-matrix-to-tf-transform/
+　 4. https://github.com/raulmur/ORB_SLAM2/issues/131
+　 5. https://github.com/raulmur/ORB_SLAM2/issues/146
+　 6. https://github.com/idsc-frazzoli/ardrone_testbed/blob/master/ORB_SLAM2/Examples/ROS/ORB_SLAM2/src/ros_mono.cc
+　 7. http://docs.ros.org/jade/api/tf/html/c++/classtf_1_1Transformer.html#a14536fe915c0c702534409c15714aa2f
+　 8. http://docs.ros.org/jade/api/tf2/html/classtf2_1_1Matrix3x3.html
+　 9. https://answers.ros.org/question/215656/how-to-transform-a-pose/
+　 10. http://docs.ros.org/jade/api/tf/html/c++/tf_8cpp_source.html#l00270
+　 11. http://docs.ros.org/jade/api/tf/html/c++/classtf_1_1Transform.html#aef642e68a6a8282ebdd07633290d9ff2
+　 12. http://myenigma.hatenablog.com/entry/20130210/1360491625
+ 	

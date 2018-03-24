@@ -1,0 +1,72 @@
+2017/12/4
+紺野隆志
+
+0. 注意
+ 0. Raspberry Pi Zero にROS(kinetic)を入れた
+　1. ほとんど参考1に従った
+　2. raspberrypi zero は Raspbian　しかいれられないため、ROSをソースコードからインストールした
+　3. めんどくさく、難易度も高いので、ubuntuが入れられるときはubuntuでやった方がいい
+　4. 環境
+　　ラズパイ： Raspberry Pi Zero
+　　  OS:      Raspbian Stretch
+　　  SDカード: 8GB
+　　  ROS:     kinetic
+　
+1. 準備
+　1-1. dirmngrのインストール
+　	$ sudo apt-get install dirmngr
+　1-2. ROS repositoryの追加
+　	$ sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'　	
+　1-3. 公開鍵の追加
+　	$ sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116　
+　1-4. update
+　	$ sudo apt-get update
+　1-5. Bootstrap　依存のインストール
+　	$ sudo apt-get install python-rosdep python-rosinstall-generator python-wstool python-rosinstall build-essential
+
+2. インストール
+ 2-1. ROS package systemの初期化
+ 	$ sudo rosdep init
+ 	$ rosdep update	
+ 2-2. catkin workspaceの作成
+ 	$ mkdir ~/ros_catkin_ws
+	$ cd ~/ros_catkin_ws
+　2-3. パッケージと依存関係のリストのビルド
+　	$ rosinstall_generator ros_comm --rosdistro kinetic --deps --wet-only --tar > kinetic-ros_comm-wet.rosinstall
+　2-4. パッケージのフェッチ
+　	$ wstool init -j8 src kinetic-ros_comm-wet.rosinstall
+	($ wstool update -j4 -t src) (上のが失敗したら)
+	$ rosdep install --from-paths src --ignore-src --rosdistro kinetic -y
+ 2-5. ROSパッケージのビルド
+ 	$ sudo mkdir -p /opt/ros/kinetic
+ 	$ sudo chown rseed42:rseed42 /opt/ros/kinetic
+  2-5-1. 並行処理は-j2がおすすめされているが、オーバフロー起こして、ビルドが失敗するので、-j1にする
+  	 ファイル権限の問題が起きるので、sudoをつける
+  	$ sudo ./src/catkin/bin/catkin_make_isolated -j1 --install --install-space /opt/ros/kinetic -DCMAKE_BUILD_TYPE=Release
+　2-6. 環境設定
+　	$ nano ~/.bashrc
+　 2-6-1. 以下を適当なところに追加
+　	/opt/ros/kinetic/setup.bash
+　	
+3. テスト
+ Terminal1
+	$ roscore
+ Terminal2
+ 	$ rostopic list
+
+
+参考
+1. How to Install ROS (Robot Operating System) On Raspberry Pi 3 with Raspbian Stretch
+2. Installing ROS Kinetic on the Raspberry Pi
+3. パッケージ: dirmngr (2.2.3-1 など)
+4. オーバーフロー (overflow)
+4. 
+5. 
+
+1. http://www.venelinpetkov.com/how-to-install-ros-robot-operating-system-on-raspberry-pi-3-with-raspbian-stretch/
+2. http://wiki.ros.org/ROSberryPi/Installing%20ROS%20Kinetic%20on%20the%20Raspberry%20Pi
+3. https://packages.debian.org/ja/sid/dirmngr
+4. http://wa3.i-3-i.info/word1199.html
+4. 
+5. 
+

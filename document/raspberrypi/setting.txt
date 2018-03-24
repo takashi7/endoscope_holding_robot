@@ -1,0 +1,28 @@
+基本的に1に沿ってセットアップ
+スターターキットのSDカードは、OSすでに入ってるし、いろいろと設定済みだったりする
+カメラのケーブルの付け方は6参照
+標準装備のエディタはnano
+
+内容
+1. Raspberry Pi ZeroとZero Wセットアップ　完全ガイド
+2. Raspberry Pi標準エディタ”nano”の使い方ガイド
+3. Welcome to Raspbian
+4. Raspberry Pi Zero Headless Setup
+5. Raspberry Piで無線LANを自動認識させる
+6. How to connect a Picamera to a Pi ZERO
+7. 
+8. 
+9. 
+10. 
+
+URL
+1. http://blue-black.ink/?page_id=1788
+2. http://www.tapun.net/raspi/raspberry-pi-nano-guide
+3. http://raspbian.org/
+4. https://davidmaitland.me/2015/12/raspberry-pi-zero-headless-setup/
+5. http://ginzanomama.hatenablog.com/entry/2013/02/06/141947
+6. https://www.youtube.com/watch?v=zFAX4pH1BPA
+7. 
+8. 
+9. 
+10. 

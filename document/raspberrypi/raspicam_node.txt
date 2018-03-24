@@ -1,0 +1,390 @@
+2017/12/4
+紺野隆志
+
+0. 依存パッケージ
+	catkin
+	compressed_image_transport
+	roscpp
+	std_msgs
+	std_srvs
+	sensor_msgs
+	camera_info_manager
+	dynamic_reconfigure
+	libraspberrypi0
+ 0-1. ないパッケージ
+	compressed_image_transport
+	sensor_msgs
+	camera_info_manager
+	dynamic_reconfigure
+
+1. Install all dependencies
+　1-0. ワークスペースへ移動
+　	$ cd ~/ros_catkin_ws
+ 1-1. パッケージ情報を取得 
+	$ rosinstall_generator compressed_image_transport --rosdistro kinetic --deps --wet-only --tar > kinetic-compressed_image_transport-wet.rosinstall
+	$ rosinstall_generator camera_info_manager --rosdistro kinetic --deps --wet-only --tar > kinetic-camera_info_manager-wet.rosinstall
+	$ rosinstall_generator dynamic_reconfigure --rosdistro kinetic --deps --wet-only --tar > kinetic-dynamic_reconfigure-wet.rosinstall
+	$ rosinstall_generator sensor_msgs --rosdistro kinetic --deps --wet-only --tar > kinetic-sensor_msgs-wet.rosinstall
+ 1-2. fetch と　~/ros_catkin_ws/src　に配置
+	$ wstool merge -t src kinetic-compressed_image_transport-wet.rosinstall
+	$ wstool merge -t src kinetic-camera_info_manager-wet.rosinstall
+	$ wstool merge -t src kinetic-dynamic_reconfigure-wet.rosinstall
+	$ wstool merge -t src kinetic-sensor_msgs-wet.rosinstall
+	$ wstool update -t src
+	$ rosdep install --from-paths src --ignore-src --rosdistro kinetic -y  
+ 1-3. パッケージのビルド　62パッケージあるので時間かかる (sudo　つける)	
+ 	$ sudo ./src/catkin/bin/catkin_make_isolated -j2 --install --install-space /opt/ros/kinetic -DCMAKE_BUILD_TYPE=Release
+　 1-3-1. エラーの修正
+　  1-3-1-1. class_loaderでpocoが見つからないというエラー (参考8)
+　 	$ sudo apt-get install libpoco-dev
+　  1-3-1-2. opencv3 でqt5関係のエラー（参考9, 10）
+　 	$ sudo apt-get install qt5-default
+　 	$ sudo apt-get update
+　 	$ sudo apt-get upgrade
+　  1-3-1-3. opencv3 でinternal compiler error
+　  	　　おそらくメモリ不足
+　  	　　あと使用可能な容量が0だったせい
+　 　　1-3-1-3-1. 容量確認
+　 　　	$ df -h
+　 　　1-3-1-3-2. 不要なパッケージの削除 (参考11)
+　 　　	$ sudo apt-get autoremove -y wolfram-engine
+	$ sudo apt-get autoremove -y sonic-pi
+	$ sudo apt-get autoremove -y libreoffice*
+	$ sudo apt-get autoremove -y scratch nuscratch squeak-plugins-scratch
+	$ sudo apt-get autoremove -y nuscratch
+	$ sudo apt-get autoremove -y gnome-user-guide
+	$ sudo apt-get autoremove -y greenfoot
+	$ sudo apt-get autoremove -y epiphany-browser*
+	$ sudo apt-get autoremove -y bluej
+	$ sudo apt-get autoremove -y netsurf*
+	$ sudo apt-get autoremove -y debian-reference*
+	$ sudo apt-get autoremove -y minecraft-pi
+	$ sudo apt-get autoremove -y claws-mail
+	$ sudo apt-get autoremove -y
+	$ sudo apt-get -y clean
+　　　 1-3-1-3-3. CPU に偏った（GPUにメモリをあげない）メモリ設定 (参考12)
+　　　 	1. $ sudo raspi-config
+　　　 	2. 8. Advanced Option
+　　　 	3. A3 Memory Split 
+　　　 	4. GPU のメモリを 16MByte に設定
+　　　 1-3-1-3-3. スワップファイルを増やす (参考12, 13)
+　　　 	1. dphys-swapfile を止める
+　　　 		$ sudo service dphys-swapfile stop
+　　　 	2. CONF_SWAPSIZEを100から1024に変更
+　　　 		$ sudo nano /etc/dphys-swapfile
+　　　 			#CONF_SWAPSIZE=100
+　　　 			CONF_SWAPSIZE=1024
+　　　 	3. dphys-swapfile を再起動
+　　　 		$ sudo service dphys-swapfile start
+   1-3-1-4. pluginlibでTinyXML2が見つからないというエラー (参考14, 15)
+　 	$ sudo apt-get install libtinyxml2-dev
+　 　1-3-1-5. camera_calibration_parsersで no package yaml-cpp （参考16）
+　 　	$ sudo apt-get install libyaml-cpp-dev　 	
+　1-4. ヘッダーのインストール (sudo　つける)
+　	$ sudo apt-get install libraspberrypi-dev
+　	
+2. raspicam node のビルド
+ 2-0.　2-1 ~ 2.3がうまくいかなかったので2.4をやった
+ 2-1. gitからソースを持ってくる
+ 	$ cd ~/ros_catkin_ws
+ 	$ git clone https://github.com/UbiquityRobotics/raspicam_node.git
+ 2-2. 自動で他の依存ライブラリをインストール
+ 	$ rosdep install --from-paths src --ignore-src --rosdistro kinetic -y  
+ 2-3. raspicam_node のビルド (sudo　つける)
+ 	$ sudo ./src/catkin/bin/catkin_make_isolated -j2 --install --install-space /opt/ros/kinetic -DCMAKE_BUILD_TYPE=Release
+　2-4. catkin_makeを使う
+　 2-4-1. 以下を ~/.bashrc　に追加
+　 	export ROS_WORKSPACE=/home/pi/catkin_ws2
+　 	source ~/catkin_ws2/devel/setup.bash
+　 2-4-2. ビルド
+　	$ cd 
+　	$ mkdir catkin_ws2
+　	$ cd catkin_ws2
+　	$ mkdir src
+　	$ cd src
+　	$ git clone https://github.com/UbiquityRobotics/raspicam_node.git
+　	$ cd ..
+　	$ catkin_make
+　	
+3. 実行
+ 3-1. スワップファイルを元に戻す (参考12, 13)
+ 	1. dphys-swapfile を止める
+　　　 		$ sudo service dphys-swapfile stop
+　　　 	2. CONF_SWAPSIZEを1024から100に変更
+　　　 		$ sudo nano /etc/dphys-swapfile
+　　　 			CONF_SWAPSIZE=100
+　　　 			#CONF_SWAPSIZE=1024
+　　　 	3. dphys-swapfile を再起動
+　　　 		$ sudo service dphys-swapfile start
+　3-2. PCをマスターとしてRaspberryPiのノードを実行できるようにする (参考18)
+　	$ nano ~/.bashrc
+　		export ROS_HOSTNAME={$pi IP}
+		export ROS_MASTER_URI=http://{$PC IP}:11311	
+　3-3. roslaunch raspicam_node camerav2_1280x960.launch を実行すると以下のエラーが出る　　　
+　	mmal: mmal_vc_component_enable: failed to enable component: ENOSPC
+	mmal: camera component couldn't be enabled
+	mmal: main: Failed to create camera component
+	mmal: Failed to run camera app. Please check for firmware updates
+  3-3-1. いろいろ調べていろいろするが解決できない (参考19~24)
+  	$ sudo rpi-update
+  	$ chmod o+rwx /dev/vchiq 
+  	$ nano /etc/modules
+  		w1-therm
+		w1-gpio pullup=1
+		i2c-dev
+		i2c-bcm2708
+		spi-bcm2708
+		snd-bcm2835
+		bcm2708_wdog
+	$ nano /etc/modprobe.d/raspi-blacklist.conf
+		# blacklist spi and i2c by default (many users don't need them)
+		#blacklist spi-bcm2708
+		blacklist i2c-bcm2708
+	$ rosrun --prefix 'gdb -ex run --args' raspicam raspicam_node
+  3-3-2. RPi-Cam-Web-Interfaceを入れなおしたらなぜかうまくいった
+  	$ git clone https://github.com/silvanmelchior/RPi_Cam_Web_Interface.git
+	$ cd RPi_Cam_Web_Interface
+	$ ./install.sh
+ 3-4. SLAM側で圧縮した画像を処理できるようにする
+  3-4-1. ros_mono.ccの編集　（参考26 ~ 31）
+  	誰も圧縮した画像でやってなかったため少し苦労した
+	void GrabImage(const sensor_msgs::ImageConstPtr& msg);　
+	→　void GrabImage(const sensor_msgs::CompressedImageConstPtr& msg);
+	ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+	→　ros::Subscriber sub = nodeHandler.subscribe("/raspicam_node/image/compressed", 1, &ImageGrabber::GrabImage,&igb); 
+    	void GrabImage()を以下に変える →
+    	void ImageGrabber::GrabImage(const sensor_msgs::CompressedImageConstPtr& msg) 
+	{
+	    cv_bridge::CvImageConstPtr cv_ptr;
+	    try
+	    {		
+		cv_ptr = cv_bridge::toCvCopy(msg); 
+	    }
+	    catch (cv_bridge::Exception& e)
+	    {
+		ROS_ERROR("cv_bridge exception: %s", e.what());
+		return;
+	    }
+
+	    cv::Mat pose = mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
+	    ros::Time t = msg->header.stamp;
+	    
+	    if (pose.empty())
+		 return;
+	    
+	    tf::Transform transform = cvMatToTF(pose);
+	    pre_transform = pre_transform;
+	    
+	    br.sendTransform(tf::StampedTransform(pre_transform, t, "world", "pre_camera_pose"));
+	    br.sendTransform(tf::StampedTransform(transform, t, "world", "camera_pose"));    
+	    
+	    pre_transform = transform;
+	}
+  3-4-2. ビルド
+  	$ cd ~/SLAM/ORB_SLAM2
+  	$ ./build_ros.sh
+
+
+4. 画質を320x240で使えるようにする
+　4-1. キャリブレーション
+　　4-1-1. ~/catkin_ws2/src/raspicam_node/launch に camerav2_320x240_30fps.launch ファイルを作る。中身は以下
+　　	<launch>
+	  <node type="raspicam_node" pkg="raspicam_node" name="raspicam_node" output="screen">
+
+	    <param name="camera_info_url" value="package://raspicam_node/camera_info/camerav2_320x240.yaml"/>
+
+	    <param name="width" value="320"/>
+	    <param name="height" value="240"/>
+
+	    <param name="framerate" value="30"/>
+	    <param name="exposure_mode" value="antishake"/>
+	    <param name="shutter_speed" value="0"/>
+
+	    <param name="camera_frame_id" value="raspicam"/>
+
+	  </node>
+
+	</launch>
+　　4-1-2. キャリブレーション (PTAMのチェッカーボードを使用) （参考32）
+　　　4-1-2-1. コマンド
+　　　　　Pi Terminal
+　	$ roslaunch raspicam_node camerav2_320x240_30fps.launch.launch
+　　　　　PC Terminal1
+　	$ rosrun image_transport republish compressed in:=/raspicam_node/image raw out:=/raspicam_node/image
+  　  PC Terminal2
+　	$ rosrun camera_calibration cameracalibrator.py --size 11x7 --square 0.02 image:=/raspicam_node/image camera:=/raspicam_node
+   4-1-2-2. 実行
+   	1. 画面全体にボードが映るようにして、上下左右、傾けたりする
+   	2. CALIBRATEボタンを押す
+   	3. SAVEボタンを押す
+   	4. COMMITボタンを押して、カメラにyamlファイルを反映
+   	5. 次にカメラを起動したとき自動でキャリブレーションファイルが開くようになる
+ 4-2. ORB-SLAMのyamlファイルの編集
+  4-2-1. 
+  	$ cd ~/SLAM/ORB_SLAM2/Examples/Monocular
+  	$ gedit camerav2_320x240.yaml
+  4-2-2. 編集
+    キャリブレーションで得たyamlファイルを参照して、求められているパラメータを編集
+ 　  キャリブレーションで得たyamlファイル
+	camera_matrix:
+	data: [fx, 0, cx, 0, fy, cy, 0, 0, 1]
+	distortion_coefficients:
+	data: [k1, k2, p1, p2, (k3)]
+    camerav2_320x240.yamlファイル(例)
+	# Camera calibration and distortion parameters (OpenCV) 
+	Camera.fx: 251.726418
+	Camera.fy: 250.643248
+	Camera.cx: 166.927692
+	Camera.cy: 117.884305
+
+	Camera.k1: 0.157391
+	Camera.k2: -0.239425
+	Camera.p1: 0.001145
+	Camera.p2: 0.004195
+	Camera.k3: 0
+
+5. シェルスクリプトでログインしてからの操作を自動化
+　5-1. ワークスペースの作成
+	$ cd
+	$ mkdir shell_script
+	$ cd shell_script
+	$ nano pi.sh
+　5-2. スクリプトの編集 (以下をpi.shに書く)
+　	#!/bin/bash
+	cd ~/RPi_Cam_Web_Interface
+	./start.sh
+	sleep 1s
+	./stop.sh
+	sleep 1s
+	roslaunch raspicam_node camerav2_320x240_30fps.launch
+　5-3. スクリプトに実行権限を与える
+　	$ chmod +x pi.sh	
+ 5-2. パス通し
+  5-2-1. 
+ 	$ nano ~/.bashrc
+  5-2-2. 以下を適当なところに追加
+  	# shel script
+	PATH="$PATH:~/shell_script"
+  5-2-3. 設定を有効にする
+  	$ source ~/.bashrc
+  	or
+  	$ exit
+ 
+6. PC側の操作の自動化 (~/bin がスクリプト置き場)
+　6-1. 
+	$ cd ~/bin
+	$ gedit pi.sh
+ 6-2. 以下を書く
+	#!/bin/bash
+	gnome-terminal --geometry=80x24+0+0 -e "sh -c 'roscore;exec bash'"
+	gnome-terminal --geometry=80x24+0+500 -e "sh -c 'ssh pi@192.168.13.3;exec bash'"
+	sleep 20s
+	gnome-terminal --geometry=80x24+1000+0 -e "sh -c 'cd ~/SLAM/ORB_SLAM2 && rosrun ORB_SLAM2 Mono Vocabulary/ORBvoc.txt Examples/Monocular/camerav2_320x240.yaml;exec bash'"
+	sleep 8s
+	gnome-terminal --geometry=80x24+1000+500 -e "sh -c 'roslaunch robot robot.launch;exec bash'"
+　6-3. 権限を付与
+　	$ chmod +x pi.sh
+
+5. 使い方 
+ 5-2. camerav2_320x240_30fps の場合
+   PC Terminal
+	$ pi.sh
+   Pi Terminal (自動で立ち上がる)
+   	パスワード入力
+   	$ pi.sh
+ 5-1. camerav2_410x308_30fps の場合
+   Pi Terminal
+	$ roslaunch raspicam_node camerav2_410x308_30fps.launch
+   PC Terminal
+	$ cd ~/SLAM/ORB_SLAM2
+	$ rosrun ORB_SLAM2 Mono Vocabulary/ORBvoc.txt Examples/Monocular/camerav2_410x308.yaml
+ 
+　   	
+
+参考
+1. How to install a Raspberry Camera Node on ROS Kinetic (Raspbian Stretch)
+2. フェッチ【DB】 (fetch【DB】)
+3. Failed to process package 'cv_bridge':
+4. wstool
+5. How can I list the dependency tree of a catkin package?
+6. rosinstall_generator
+7. raspicam_node
+8. ROS Hydro source install cmake build error at Ubuntu 14.04
+9. Ubuntu OpenCV Install and Setup (Qt5 ?)
+10. What package do I need to build a Qt 5 & CMake application?
+11. Raspberry Piでオリジナルのイメージを圧縮して保存のススメ
+12. Raspberry Pi でビルドがこんな感じで失敗したときの対処
+13. スワップファイル (swap file)
+14. Building ros_control on Hydro
+15. Error in cmake : variables NOTFOUND
+16. package 'yaml-cpp' not found
+17. What causes ENOSPC error when using the Raspberry Pi camera module?
+18. 複数のマシン上でROSを実行する
+19. camera component couldn't be enabled
+20. What causes ENOSPC error when using the Raspberry Pi camera module?
+21. Kernels >= 3.10: w1_gpio destroys i2c bus 0 (raspicam doesn't work anymore) #435
+22. Illegal Instruction when trying to run raspicam_node
+23. 【ROS】画像圧縮によってフレームレートを向上させるパッケージの紹介
+24. ラズパイ2でカメラモジュールを使いたいのですが
+25. Multiple errors launching openni.launch: "Tried to advertise a service that is already advertised in this node"
+26. How to subscribe to sensor_msgs/CompressedImage without the raw image?
+27. Running the Simple Image Publisher and Subscriber with Different Transports
+28. How to subscribe camera/image/compressed
+29. cv_bridge.h File Reference
+30. cv_bridge Namespace Reference
+31. Extract header timestamp of Image message
+32. ROS node for camera module of Raspberry Pi
+
+
+
+1. http://www.venelinpetkov.com/how-to-install-a-raspberry-camera-node-on-ros-kinetic-raspbian-stretch/
+2. http://wa3.i-3-i.info/word11583.html
+3. https://answers.ros.org/question/223481/failed-to-process-package-cv_bridge/
+4. http://wiki.ros.org/action/fullsearch/wstool?action=fullsearch&context=180&value=linkto%3A%22wstool%22
+5. https://answers.ros.org/question/54878/how-can-i-list-the-dependency-tree-of-a-catkin-package/
+6. http://wiki.ros.org/rosinstall_generator
+7. https://github.com/UbiquityRobotics/raspicam_node/tree/indigo_safe
+8. https://answers.ros.org/question/194200/ros-hydro-source-install-cmake-build-error-at-ubuntu-1404/
+9. https://stackoverflow.com/questions/24378473/ubuntu-opencv-install-and-setup-qt5
+10. https://askubuntu.com/questions/374755/what-package-do-i-need-to-build-a-qt-5-cmake-application
+11. http://karaage.hatenadiary.jp/entry/2017/06/20/073000
+12. https://qiita.com/UedaTakeyuki/items/6fdef6ea396d8ccb4a8f
+13. http://wa3.i-3-i.info/word1722.html
+14. https://answers.ros.org/question/141151/building-ros_control-on-hydro/
+15. https://askubuntu.com/questions/801001/error-in-cmake-variables-notfound
+16. https://answers.ros.org/question/219057/package-yaml-cpp-not-found/ 
+17. https://raspberrypi.stackexchange.com/questions/13764/what-causes-enospc-error-when-using-the-raspberry-pi-camera-module
+18. http://wiki.ros.org/ja/ROS/Tutorials/MultipleMachines
+19. https://www.google.co.jp/search?q=camera+component+couldn%27t+be+enabled&oq=camera+component+couldn%27t+be+enabled&aqs=chrome..69i57j0l5.556j0j7&sourceid=chrome&ie=UTF-8
+20. https://raspberrypi.stackexchange.com/questions/13764/what-causes-enospc-error-when-using-the-raspberry-pi-camera-module
+21. https://github.com/raspberrypi/linux/issues/435
+22. https://answers.ros.org/question/198564/illegal-instruction-when-trying-to-run-raspicam_node/
+23. http://mprg-robot.isc.chubu.ac.jp/image_transport/
+24. https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q10152659650
+25. https://answers.ros.org/question/11313/multiple-errors-launching-opennilaunch-tried-to-advertise-a-service-that-is-already-advertised-in-this-node/
+26. https://answers.ros.org/question/230476/how-to-subscribe-to-sensor_msgscompressedimage-without-the-raw-image/
+27. http://wiki.ros.org/image_transport/Tutorials/ExaminingImagePublisherSubscriber
+28. http://forum.erlerobotics.com/t/how-to-subscribe-camera-image-compressed/2341
+29. http://docs.ros.org/api/cv_bridge/html/c++/cv__bridge_8h.html
+30. http://docs.ros.org/api/cv_bridge/html/c++/namespacecv__bridge.html
+31. https://answers.ros.org/question/227008/extract-header-timestamp-of-image-message/
+32. https://github.com/UbiquityRobotics/raspicam_node
+ 	
+ 	
+
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 	
+ 

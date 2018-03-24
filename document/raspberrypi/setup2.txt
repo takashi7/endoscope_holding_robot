@@ -1,0 +1,82 @@
+2017/12/19
+紺野隆志
+
+0. 注意
+　0-1. 学生室でラズパイ
+　	bashrc		変更
+　	pc: pi.sh
+　	pi: pi.sh 　
+　	ros_mono.cc	変更
+　0-2. 学生室で USBカメラ
+　	bashrc		変更
+　	pc: usb.sh	
+　	ros_mono.cc	変更
+　0-3. アスパラでラズパイ
+	bashrc		変更
+　	pc: aspi.sh
+　	pi: pi.sh 　
+　	ros_mono.cc	変更
+　0-4. アスパラでUSBカメラ
+　	bashrc		変更
+　	pc: aspara.sh
+　	ros_mono.cc	変更
+　0-5. 手術室でラズパイ
+	bashrc		変更
+　	pc: ope.sh	変更
+　	pi: pi.sh	変更　
+　	ros_mono.cc	変更	
+　0-6. 手術室でUSBカメラ
+　	bashrc		変更
+　	pc: usb.sh	
+　	ros_mono.cc	変更
+
+1. PC側
+　1-0. IPアドレスの確認
+　	$ hostname -I
+　1-1. bashrcで以下のIPアドレスを変える
+	export ROS_HOSTNAME=10.42.0.1
+ 1-2. ope.sh　の変更
+  1-2-1. 
+ 	$ cd ~/bin && gedit ope.sh
+  1-2-2. ssh接続をラズパイのIPアドレスに変える
+  	gnome-terminal --geometry=80x24+0+500 -e "sh -c 'ssh pi@10.42.0.68;exec bash'"
+ 1-3. ros_mono.cc (ラズパイからUSBに変更)
+ 	$ pi2usb.sh
+ 1-4. ros_mono.cc (USBからラズパイに変更)
+ 	$ usb2pi.sh
+ 	
+2. ラズパイ側
+　2-0.　IPアドレスの確認
+　	$ hostname -I
+　2-1. bashrcでROS_HOSTNAMEをラズパイのIPアドレスに、ROS_MASTER_URIをPCのIPアドレスにする
+　	export ROS_HOSTNAME=10.42.0.68
+	export ROS_MASTER_URI=http://10.42.0.1:11311
+
+3. 実行
+ 3-1. 学生室でラズパイを使う場合
+ 	PC Terminal
+		$ pi.sh
+   	Pi Terminal (自動で立ち上がる)
+   		パスワード入力
+   		$ pi.sh
+ 3-2. 学生室で USBカメラを使う場合
+ 	PC Terminal
+		$ usb.sh
+ 3-3. アスパラでラズパイを使う場合
+ 	PC Terminal
+		$ aspi.sh
+   	Pi Terminal (自動で立ち上がる)
+   		パスワード入力
+   		$ pi.sh
+ 3-4. アスパラで USBカメラを使う場合
+ 	PC Terminal
+		$ aspara.sh  
+ 3-5. 手術室でラズパイを使う場合
+ 	PC Terminal
+		$ ope.sh
+   	Pi Terminal (自動で立ち上がる)
+   		パスワード入力
+   		$ pi.sh
+ 3-6. 手術室で USBカメラを使う場合
+ 	PC Terminal
+		$ usb.sh  	
