@@ -66,6 +66,15 @@ target_link_libraries(Mono
 ${LIBS}
 )
 
+rosbuild_add_executable(Mono_sub
+src/ros_mono_sub.cc
+)
+target_link_libraries(Mono_sub
+${LIBS}
+)
+
+
+
 # Node for monocular camera (Augmented Reality Demo)
 rosbuild_add_executable(MonoAR
 src/AR/ros_mono_ar.cc

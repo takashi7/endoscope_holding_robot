@@ -37,7 +37,7 @@
 #include "tf/transform_datatypes.h"
 #include <tf/transform_broadcaster.h>
 
-//#include <image_transport/image_transport.h> // my pi
+#include <image_transport/image_transport.h> // my pi
 
 using namespace std;
 
@@ -46,8 +46,8 @@ class ImageGrabber
 public:
     ImageGrabber(ORB_SLAM2::System* pSLAM):mpSLAM(pSLAM){}
 
-    void GrabImage(const sensor_msgs::ImageConstPtr& msg);
-    //void GrabImage(const sensor_msgs::CompressedImageConstPtr& msg); // my pi
+    //void GrabImage(const sensor_msgs::ImageConstPtr& msg);
+    void GrabImage(const sensor_msgs::CompressedImageConstPtr& msg); // my pi
     
     tf::Transform cvMatToTF ( cv::Mat Tcw );
 
@@ -76,8 +76,8 @@ int main(int argc, char **argv)
     ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
-    //ros::Subscriber sub = nodeHandler.subscribe("/raspicam_node/image/compressed", 1, &ImageGrabber::GrabImage,&igb); // my pi
+    //ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+    ros::Subscriber sub = nodeHandler.subscribe("/raspicam_node/image/compressed", 1, &ImageGrabber::GrabImage,&igb); // my pi
     //image_transport::Subscriber sub; // my pi
     // add
     ros::Publisher pub_vision = nodeHandler.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose",100);
@@ -96,51 +96,17 @@ int main(int argc, char **argv)
 }
 
 
-////void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
-//void ImageGrabber::GrabImage(const sensor_msgs::CompressedImageConstPtr& msg) 
-//// my pi
-//{
-//    //cv::Mat msg = cv::imdecode(cv::Mat(msg_pi->data),1); // my pi
-//    // Copy the ros image message to cv::Mat.
-//    cv_bridge::CvImageConstPtr cv_ptr;
-//    try
-//    {
-//        //cv_ptr = cv_bridge::toCvShare(msg);
-//        cv_ptr = cv_bridge::toCvCopy(msg); //my pi
-//    }
-//    catch (cv_bridge::Exception& e)
-//    {
-//        ROS_ERROR("cv_bridge exception: %s", e.what());
-//        return;
-//    }
-
-//    // add all
-//    cv::Mat pose = mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
-//    ros::Time t = msg->header.stamp;
-//    
-//    if (pose.empty())
-//         return;
-//    
-//    tf::Transform transform = cvMatToTF(pose);
-//    //static tf::Transform pre_transform = pre_transform;
-//    pre_transform = pre_transform;
-//    
-//    br.sendTransform(tf::StampedTransform(pre_transform, t, "world", "pre_camera_pose"));
-//    br.sendTransform(tf::StampedTransform(transform, t, "world", "camera_pose"));    
-//    
-//    pre_transform = transform;
-//}
-
-
-
-
-void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
+//void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
+void ImageGrabber::GrabImage(const sensor_msgs::CompressedImageConstPtr& msg) 
+// my pi
 {
+    //cv::Mat msg = cv::imdecode(cv::Mat(msg_pi->data),1); // my pi
     // Copy the ros image message to cv::Mat.
     cv_bridge::CvImageConstPtr cv_ptr;
     try
     {
-        cv_ptr = cv_bridge::toCvShare(msg);
+        //cv_ptr = cv_bridge::toCvShare(msg);
+        cv_ptr = cv_bridge::toCvCopy(msg); //my pi
     }
     catch (cv_bridge::Exception& e)
     {
@@ -164,6 +130,40 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
     
     pre_transform = transform;
 }
+
+
+
+
+//void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
+//{
+//    // Copy the ros image message to cv::Mat.
+//    cv_bridge::CvImageConstPtr cv_ptr;
+//    try
+//    {
+//        cv_ptr = cv_bridge::toCvShare(msg);
+//    }
+//    catch (cv_bridge::Exception& e)
+//    {
+//        ROS_ERROR("cv_bridge exception: %s", e.what());
+//        return;
+//    }
+
+//    // add all
+//    cv::Mat pose = mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
+//    ros::Time t = msg->header.stamp;
+//    
+//    if (pose.empty())
+//         return;
+//    
+//    tf::Transform transform = cvMatToTF(pose);
+//    //static tf::Transform pre_transform = pre_transform;
+//    pre_transform = pre_transform;
+//    
+//    br.sendTransform(tf::StampedTransform(pre_transform, t, "world", "pre_camera_pose"));
+//    br.sendTransform(tf::StampedTransform(transform, t, "world", "camera_pose"));    
+//    
+//    pre_transform = transform;
+//}
 
 
 tf::Transform ImageGrabber::cvMatToTF ( cv::Mat Tcw )
